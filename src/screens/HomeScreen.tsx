@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback } from "react";
 import {
   View,
   Text,
@@ -15,14 +15,7 @@ import * as Notifications from "expo-notifications";
 import { RootStackParamList } from "../navigation/AppNavigator";
 import { useAuth } from "../context/AuthContext";
 import { HabitoItem } from "../components/HabitoItem";
-import {
-  Habito,
-  eliminarHabito,
-  obtenerHabitos,
-  sincronizarCompletados,
-  toggleCompletadoHoy,
-  guardarHabitos,
-} from "../storage/habitoStorage";
+import { useHabitoStore } from "../store/habitoStore";
 
 // Configurar cómo se muestran las notificaciones cuando la app está abierta
 Notifications.setNotificationHandler({
@@ -39,21 +32,15 @@ type Props = {
 
 export default function HomeScreen({ navigation }: Props) {
   const { usuarioActual, logout } = useAuth();
-  const [habitos, setHabitos] = useState<Habito[]>([]);
-  const [refrescando, setRefrescando] = useState(false);
 
-  const cargarHabitos = async () => {
-    const lista = await obtenerHabitos();
-    const sincronizados = sincronizarCompletados(lista);
-    // Si hubo cambios por sincronización, guardarlos
-    const tuvoCambios = sincronizados.some(
-      (h, i) => h.completadoHoy !== lista[i].completadoHoy
-    );
-    if (tuvoCambios) await guardarHabitos(sincronizados);
-    setHabitos(sincronizados);
-  };
+  // Zustand store — reemplaza useState<Habito[]>
+  const habitos = useHabitoStore((state) => state.habitos);
+  const cargando = useHabitoStore((state) => state.cargando);
+  const cargarHabitos = useHabitoStore((state) => state.cargarHabitos);
+  const toggleCompletado = useHabitoStore((state) => state.toggleCompletado);
+  const eliminarHabito = useHabitoStore((state) => state.eliminarHabito);
 
-  // Recarga la lista cada vez que la pantalla recibe foco (al volver de AgregarHabito)
+  // Recarga la lista cada vez que la pantalla recibe foco
   useFocusEffect(
     useCallback(() => {
       cargarHabitos();
@@ -61,27 +48,21 @@ export default function HomeScreen({ navigation }: Props) {
   );
 
   const handleRefresh = async () => {
-    setRefrescando(true);
     await cargarHabitos();
-    setRefrescando(false);
   };
 
   const handleToggle = async (id: string) => {
-    const actualizados = await toggleCompletadoHoy(id);
-    setHabitos(actualizados);
+    await toggleCompletado(id);
   };
 
   const handleEliminar = async (id: string) => {
     await eliminarHabito(id);
-    await cargarHabitos();
   };
 
   const programarNotificacion = async () => {
-    // Pedir permisos primero
     const { status } = await Notifications.requestPermissionsAsync();
     if (status !== "granted") return;
 
-    // Notificación que se dispara 10 segundos después
     await Notifications.scheduleNotificationAsync({
       content: {
         title: "⏰ Recordatorio Habitly",
@@ -109,7 +90,13 @@ export default function HomeScreen({ navigation }: Props) {
         <View>
           <Text style={styles.logo}>HABITLY 〰️</Text>
           <Text style={styles.saludo}>Hola!, {usuarioActual} </Text>
-          <Text style={styles.fecha}>{new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}</Text>
+          <Text style={styles.fecha}>
+            {new Date().toLocaleDateString("es-AR", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })}
+          </Text>
         </View>
         <TouchableOpacity onPress={logout} style={styles.btnLogout}>
           <Text style={styles.txtLogout}>Salir</Text>
@@ -123,8 +110,13 @@ export default function HomeScreen({ navigation }: Props) {
           {completadosHoy}/{habitos.length}
         </Text>
         <View style={styles.barraFondo}>
-  <View style={[styles.barraProgreso, { width: `${porcentaje}%` as any }]} />
-</View>
+          <View
+            style={[
+              styles.barraProgreso,
+              { width: `${porcentaje}%` as any },
+            ]}
+          />
+        </View>
         <Text style={styles.resumenPorcentaje}>{porcentaje}% completado</Text>
       </View>
 
@@ -133,9 +125,7 @@ export default function HomeScreen({ navigation }: Props) {
         style={styles.btnRecordatorio}
         onPress={programarNotificacion}
       >
-        <Text style={styles.txtRecordatorio}>
-           🕜  Añadir recordatorio (10s)
-        </Text>
+        <Text style={styles.txtRecordatorio}>🕜 Añadir recordatorio (10s)</Text>
       </TouchableOpacity>
 
       {/* Lista de habitos */}
@@ -151,13 +141,14 @@ export default function HomeScreen({ navigation }: Props) {
         )}
         contentContainerStyle={styles.lista}
         refreshControl={
-          <RefreshControl refreshing={refrescando} onRefresh={handleRefresh} />
+          <RefreshControl refreshing={cargando} onRefresh={handleRefresh} />
         }
         ListEmptyComponent={
           <View style={styles.vacio}>
             <Text style={styles.vacioEmoji}>🌱</Text>
             <Text style={styles.vacioTexto}>
-              Todavía no tienes hábitos pendientes.{"\n"}¡Agrega uno para empezar!
+              Todavía no tienes hábitos pendientes.{"\n"}¡Agrega uno para
+              empezar!
             </Text>
           </View>
         }
@@ -187,16 +178,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 40,
     paddingBottom: 12,
-    
   },
-
   logo: {
     fontSize: 30,
     fontWeight: "900",
     color: "#A78BFA",
     marginBottom: 6,
     letterSpacing: -1.5,
-    fontStyle: 'italic'
+    fontStyle: "italic",
   },
   saludo: {
     fontSize: 25,
@@ -215,7 +204,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     backgroundColor: "#7C3AED",
     borderRadius: 8,
-    
   },
   txtLogout: {
     color: "#ededed",
@@ -245,14 +233,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(33, 96, 243, 0.5)",
     borderRadius: 3,
     overflow: "hidden",
-     flexDirection: "row",
+    flexDirection: "row",
   },
   barraProgreso: {
     height: 6,
     backgroundColor: "#7C3AED",
     borderRadius: 3,
-    
-  
   },
   resumenPorcentaje: {
     color: "#5B21B6",
@@ -301,7 +287,6 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
-    
   },
   fabTexto: {
     color: "#7C3AED",

@@ -1,10 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-
 const USERS_KEY = "habito_tracker_users";
 const HABITS_KEY = "habito_tracker_habits";
 const SESSION_KEY = "habito_tracker_session";
-
 
 export type Usuario = {
   username: string;
@@ -16,12 +14,25 @@ export type Habito = {
   nombre: string;
   descripcion: string;
   frecuencia: "diario" | "semanal";
-  creadoEn: string; // ISO date string
+  creadoEn: string;
   completadoHoy: boolean;
-  ultimaVezCompletado: string | null; // ISO date string or null
+  ultimaVezCompletado: string | null;
+  // Nuevos campos sesión 2
+  fotoUri?: string | null;
+  ubicacion?: {
+    latitud: number;
+    longitud: number;
+    direccion?: string;
+  } | null;
+  // Nuevos campos sesión 3
+  contacto?: {
+    nombre: string;
+    telefono?: string;
+  } | null;
+  eventoCalendarioId?: string | null;
 };
 
-// ─Usuarios -
+// ── Usuarios ──
 export async function obtenerUsuarios(): Promise<Usuario[]> {
   try {
     const data = await AsyncStorage.getItem(USERS_KEY);
@@ -54,7 +65,7 @@ export async function validarCredenciales(
   );
 }
 
-// ─ Sesión ─
+// ── Sesión ──
 export async function guardarSesion(username: string): Promise<void> {
   await AsyncStorage.setItem(SESSION_KEY, username);
 }
@@ -67,7 +78,7 @@ export async function cerrarSesion(): Promise<void> {
   await AsyncStorage.removeItem(SESSION_KEY);
 }
 
-// ── Habitos ─
+// ── Hábitos ──
 export async function obtenerHabitos(): Promise<Habito[]> {
   try {
     const data = await AsyncStorage.getItem(HABITS_KEY);
@@ -81,7 +92,12 @@ export async function guardarHabitos(habitos: Habito[]): Promise<void> {
   await AsyncStorage.setItem(HABITS_KEY, JSON.stringify(habitos));
 }
 
-export async function agregarHabito(habito: Omit<Habito, "id" | "creadoEn" | "completadoHoy" | "ultimaVezCompletado">): Promise<Habito> {
+export async function agregarHabito(
+  habito: Omit<
+    Habito,
+    "id" | "creadoEn" | "completadoHoy" | "ultimaVezCompletado"
+  >
+): Promise<Habito> {
   const habitos = await obtenerHabitos();
   const nuevo: Habito = {
     ...habito,
@@ -118,7 +134,17 @@ export async function toggleCompletadoHoy(id: string): Promise<Habito[]> {
   return actualizados;
 }
 
-// Resetea el estado si cambio el día
+export async function actualizarHabito(
+  id: string,
+  cambios: Partial<Habito>
+): Promise<void> {
+  const habitos = await obtenerHabitos();
+  const actualizados = habitos.map((h) =>
+    h.id === id ? { ...h, ...cambios } : h
+  );
+  await guardarHabitos(actualizados);
+}
+
 export function sincronizarCompletados(habitos: Habito[]): Habito[] {
   const hoy = new Date().toDateString();
   return habitos.map((h) => {
