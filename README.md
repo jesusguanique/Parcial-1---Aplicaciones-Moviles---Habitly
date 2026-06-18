@@ -156,8 +156,15 @@ Si sigue fallando, la solución más segura es dejar que Expo elija las versione
 bashnpx expo install --fix
 
 
-*En el caso de los test Me daba error:
+*En el caso de los test me daba error:
 
 render está devolviendo una Promise, lo que significa que el componente tiene algo async que está interfiriendo. Esto pasa porque @testing-library/react-native v14 cambió y ahora render es asíncrono en ciertos contextos.
 El fix es agregar async/await a los tests
 El problema era que @testing-library/react-native v14 cambió render a asíncrono, así que había que usar async/await en los tests de componentes.
+
+*Prompt para migración a Zustand:**
+> "Sesión de HabitlyApp. Tengo una app React Native con Expo y TypeScript. El estado de los hábitos se maneja con useState y llamadas directas al storage. Necesito migrar el estado global a Zustand sin que se rompa mi codigo actual. Te paso App.tsx, habitoStorage.ts, HomeScreen.tsx, AgregarHabitoScreen.tsx y HabitoItem.tsx para que me guies manteniendo mis estilos y estructura."
+
+### Comparación código generado vs código final
+
+El código generado por IA fue integrado con ajustes menores: se mantuvieron los nombres de variables en español, los estilos originales de la app (colores, tipografías, bordes) y la estructura de carpetas existente. La IA respetó el contexto dado en cada prompt, lo que redujo significativamente el tiempo de implementación de funcionalidades como permisos y manejo de errores.
