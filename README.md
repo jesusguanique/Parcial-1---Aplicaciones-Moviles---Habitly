@@ -51,10 +51,10 @@ Luego escaneá el QR con la app Expo Go en tu celular, o presioná `a` para Andr
 npm test
 ```
 
-Los tests se encuentran en la carpeta `__tests__/` con la siguiente estructura:
+Los tests se encuentran en la carpeta `tests` con la siguiente estructura:
 
 ```
-__tests__/
+tests/
 ├── components/
 │   └── HabitoItem.test.tsx     # Test del componente HabitoItem
 ├── storage/
@@ -131,24 +131,33 @@ HabitlyApp/
 
 ---
 
-## Punto extra — IA aplicada al desarrollo
+## IA aplicada al desarrollo
 
 Esta app fue desarrollada con asistencia de **Claude (Anthropic)** como herramienta de IA para generación y refactorización de código.
 
 ### Herramientas utilizadas
-- **Claude (claude.ai)** — generación de código, migración a Zustand, implementación de permisos y tests
+- **Claude (claude.ai)** — correccion de bugs a la hora de corre test, dificultades dadas por el render, errores de version de react y codigo erroneo
 
 ### Ejemplos de prompts utilizados
 
-**Prompt para migración a Zustand:**
-> "Sesión 1 de HabitlyApp. Tengo una app React Native con Expo y TypeScript. El estado de los hábitos se maneja con useState y llamadas directas al storage. Necesito migrar el estado global a Zustand. Te paso App.tsx, habitoStorage.ts, HomeScreen.tsx, AgregarHabitoScreen.tsx y HabitoItem.tsx para que lo implementes manteniendo mis estilos y estructura."
+*presento coflicto de version en Expo , queda pantalla en negro, ya reinstale la App
+conflicto de versiones:
 
-**Prompt para recursos del dispositivo:**
-> "Sesión 2 de HabitlyApp. Ya tenemos Zustand funcionando. Ahora implementá: cámara con expo-image-picker, galería, y ubicación con expo-location. Asociar foto y ubicación a cada hábito. Manejar permisos correctamente con mensajes claros al usuario."
+react: 19.2.7
+react-native-renderer: 19.1.0
 
-**Prompt para testing:**
-> "Sesión 4 de HabitlyApp — última sesión. Necesito: configurar Jest + React Native Testing Library, escribir los 3 tests mínimos requeridos por la consigna (componente, lógica de negocio y store Zustand), y actualizar el README."
+Soluciones probadas y acertadas: 
+La solución es fijar la versión correcta de react:
+bashnpm install react@19.0.0 react-dom@19.0.0 --legacy-peer-deps
+Después limpiá la caché y reiniciá:
+bashnpx expo start --clear
 
-### Comparación código generado vs código final
+Si sigue fallando, la solución más segura es dejar que Expo elija las versiones correctas automáticamente:
+bashnpx expo install --fix
 
-El código generado por IA fue integrado con ajustes menores: se mantuvieron los nombres de variables en español, los estilos originales de la app (colores, tipografías, bordes) y la estructura de carpetas existente. La IA respetó el contexto dado en cada prompt, lo que redujo significativamente el tiempo de implementación de funcionalidades como permisos y manejo de errores.
+
+*En el caso de los test Me daba error:
+
+render está devolviendo una Promise, lo que significa que el componente tiene algo async que está interfiriendo. Esto pasa porque @testing-library/react-native v14 cambió y ahora render es asíncrono en ciertos contextos.
+El fix es agregar async/await a los tests
+El problema era que @testing-library/react-native v14 cambió render a asíncrono, así que había que usar async/await en los tests de componentes.
